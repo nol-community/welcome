@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-KyZXEAg3QhqLMpG8r+8fhAXLRk2vvoC2f3B09zVXn8CA5QIVfZOJ3BCsw2P0p/We"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.5.1/web3.min.js"
+      integrity="sha512-8Frac7ZdCMHBsKch6t/XEAKauXT1PXTgRGX/9NO3IzfLQ3QlTnr8ACRmJMOWPr3rxeCFpjUH+Hk7Y4v4zm825Q=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+
+    <style>
+      body {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-image: url('https://i.imgur.com/HNnCV1G.jpg');
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+      }
+
+      #apply-button {
+        width: 260px;
+        height: 60px;
+        font-size: 24px;
+        font-weight: bold;
+      }
+
+      .card-title {
+        margin-bottom: 30px;
+      }
+
+      .row {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-end;
+        align-items: center;
+        margin-right: 8px;
+      }
+
+      .row img {
+        width: auto;
+        height: 30px;
+      }
+
+      .row span {
+        width: auto;
+        padding: 0;
+      }
+
+      #loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: rgba(0,0,0,0.4);
+      }
+    </style>
+    <script>
+      const minUsdcBalance = 3000 * 10 ** 6;
+      const nolmContractAddress = '0xe90969FFd98C5E936CCB0073d29c8940933c46D7';
+      const usdcContractAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+    </script>
+
+    <title>NOLM</title>
+  </head>
+  <body onload="checkMetamask()">
+    <div id="loader">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+    <div class="card text-center">
+      <div class="card-body">
+        <h5 class="card-title">3,000 USDC for 1 Ticket</h5>
+        <p class="card-text">
+          <div class="row">
+            <span id="usdc-balance"></span>
+            <img src="https://icons-for-free.com/iconfiles/png/128/cryptocurrency+icons+++color+usdc-1324449146826221536.png"/>
+          </div>
+          <div class="row">
+            <span id="ticket-balance"></span>
+            <img src="https://iconarchive.com/download/i80660/custom-icon-design/flatastic-2/ticket.ico"/>
+          </div>
+        </p>
+        <button
+          type="button"
+          class="btn btn-primary"
+          id="apply-button"
+          onclick="register().then(hideLoader)"
+        >
+          Purchase Ticket
+        </button>
+      </div>
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-U1DAWAznBHeqEIlVSCgzq+c9gqGAJn5c/t99JyeKa9xxaYpSvHU5awsuZVVFIhvj"
+      crossorigin="anonymous"
+    ></script>
+
+    <script>
+      const ERC20_ABI = [
+        {
+          inputs: [
+            {
+              internalType: 'address',
+              name: 'owner',
+              type: 'address',
+            },
+            {
+              internalType: 'address',
+              name: 'spender',
+              type: 'address',
+            },
+          ],
+          name: 'allowance',
+          outputs: [
+            {
+              internalType: 'uint256',
+              name: '',
+              type: 'uint256',
+            },
+          ],
+          stateMutability: 'view',
+          type: 'function',
+        },
+        {
+          inputs: [
+            {
+              internalType: 'address',
+              name: 'spender',
+              type: 'address',
+            },
+            {
+              internalType: 'uint256',
+              name: 'amount',
+              type: 'uint256',
+            },
+          ],
+          name: 'approve',
+          outputs: [
+            {
+              internalType: 'bool',
+              name: '',
+              type: 'bool',
+            },
+          ],
+          stateMutability: 'nonpayable',
+          type: 'function',
+        },
+        {
+          inputs: [
+            {
+              internalType: 'address',
+              name: 'account',
+              type: 'address',
+            },
+          ],
+          name: 'balanceOf',
+          outputs: [
+            {
+              internalType: 'uint256',
+              name: '',
+              type: 'uint256',
+            },
+          ],
+          stateMutability: 'view',
+          type: 'function',
+        },
+        {
+          inputs: [],
+          name: 'decimals',
+          outputs: [
+            {
+              internalType: 'uint8',
+              name: '',
+              type: 'uint8',
+            },
+          ],
+          stateMutability: 'view',
+          type: 'function',
+        },
+      ];
+
+      const NOLM_ABI = [
+        {
+          inputs: [
+            {
+              internalType: 'address',
+              name: 'account',
+              type: 'address',
+            },
+          ],
+          name: 'balanceOf',
+          outputs: [
+            {
+              internalType: 'uint256',
+              name: '',
+              type: 'uint256',
+            },
+          ],
+          stateMutability: 'view',
+          type: 'function',
+        },
+        {
+          inputs: [],
+          name: 'purchaseMembership',
+          outputs: [],
+          stateMutability: 'nonpayable',
+          type: 'function',
+        },
+      ];
+
+    </script>
+    <script>
+      function showLoader() {
+        document.getElementById('loader').style.display = 'inherit';
+      }
+      
+      function hideLoader() {
+        document.getElementById('loader').style.display = 'none';
+      }
+    </script>
+    <script>
+      const dollarUSLocale = Intl.NumberFormat('en-US');
+
+      let ethereum;
+      let web3;
+
+      let account;
+      let usdcContract;
+      let usdcBalance;
+      let nolmContract;
+      
+      async function checkMetamask() {
+        hideLoader();
+        if (typeof window.ethereum == 'undefined') {
+          alert('Metamask is not installed');
+          const button = document.getElementById('apply-button');
+          button.disabled = true;
+        } else {
+          ethereum = window.ethereum;
+          web3 = new Web3(ethereum);
+          await enableMetamask();
+
+          usdcContract = new web3.eth.Contract(
+            ERC20_ABI,
+            usdcContractAddress
+          );
+
+          nolmContract = new web3.eth.Contract(NOLM_ABI, nolmContractAddress);
+
+          checkUSDCBalance();
+          checkTickets();
+        }
+      }
+
+      async function enableMetamask() {
+        const accounts = await ethereum.request({
+          method: 'eth_requestAccounts',
+        });
+        account = accounts[0];
+      }
+
+      async function register() {
+        showLoader();
+        let goodToGo = true;
+
+        goodToGo = await validateUSDCBalance();
+        if (!goodToGo) return false;
+
+        goodToGo = await checkAllowedBalance();
+        if (!goodToGo) {
+          goodToGo = await callApproveFunction();
+          if (!goodToGo) return false;
+        }
+
+        await purchaseMembership();
+        window.location.reload();
+      }
+
+      async function validateUSDCBalance() {
+        const usdcBalBn = web3.utils.toBN(usdcBalance);
+        const minBalBn = web3.utils.toBN(minUsdcBalance);
+
+        if (usdcBalBn.lt(minBalBn)) {
+          alert('Not enough USDC');
+          return false;
+        }
+
+        return true;
+      }
+
+      async function checkUSDCBalance() {
+        usdcBalance = await usdcContract.methods.balanceOf(account).call();
+        console.log('Balance : ', usdcBalance);
+
+        const usdcBalBn = web3.utils.toBN(usdcBalance);
+        
+        document.getElementById('usdc-balance').innerHTML = dollarUSLocale.format(usdcBalBn.div(new web3.utils.toBN(10 ** 6)).toString());
+      }
+
+      async function checkTickets() {
+        nolmBalance = await nolmContract.methods.balanceOf(account).call();
+        console.log('Nolm Balance : ', nolmBalance);
+
+        document.getElementById('ticket-balance').innerHTML = nolmBalance;
+      }
+
+      async function checkAllowedBalance() {
+        allowedUsdcBalance = await usdcContract.methods
+          .allowance(account, nolmContractAddress)
+          .call();
+        console.log('Allowed Balance : ', allowedUsdcBalance);
+
+        const allowedUsdcBalBn = web3.utils.toBN(allowedUsdcBalance);
+        const minBalBn = web3.utils.toBN(minUsdcBalance);
+
+        if (allowedUsdcBalBn.lt(minBalBn)) {
+          return false;
+        }
+
+        return true;
+      }
+
+      async function callApproveFunction() {
+        await usdcContract.methods
+          .approve(nolmContractAddress, minUsdcBalance)
+          .send({ from: account });
+        return true;
+      }
+
+      async function purchaseMembership() {
+        await nolmContract.methods.purchaseMembership().send({ from: account });
+      }
+    </script>
+  </body>
+</html>
